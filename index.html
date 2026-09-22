@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Fold Your Name</title>
+<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0b0c10; color: #eee;
+         text-align: center; margin: 0; padding: 40px 20px; }
+  h1 { font-size: 1.8em; margin-bottom: 0.2em; }
+  p.sub { color: #888; margin-top: 0; }
+  input { font-size: 1.1em; padding: 10px 14px; border-radius: 8px; border: none;
+          width: 240px; margin-right: 8px; }
+  button { font-size: 1.1em; padding: 10px 18px; border-radius: 8px; border: none;
+           background: #4f8cff; color: white; cursor: pointer; }
+  button:hover { background: #3a75e0; }
+  #viewer { width: 400px; height: 400px; margin: 30px auto; border-radius: 12px;
+            background: #14161c; position: relative; }
+  #info { margin-top: 10px; font-size: 0.95em; color: #ccc; min-height: 1.5em; }
+  #status { color: #888; margin-top: 20px; }
+</style>
+</head>
+<body>
+  <h1>Fold Your Name</h1>
+  <p class="sub">Type your name. An AI model folds it into a protein.</p>
+
+  <div>
+    <input id="nameInput" placeholder="Your name" maxlength="40">
+    <button onclick="foldName()">Fold it</button>
+  </div>
+
+  <div id="status"></div>
+  <div id="viewer"></div>
+  <div id="info"></div>
+
+  <script>
+    let viewer = $3Dmol.createViewer("viewer", { backgroundColor: "0x14161c" });
+
+    async function foldName() {
+      const name = document.getElementById("nameInput").value.trim();
+      if (!name) return;
+
+      document.getElementById("status").innerText = "Folding...";
+      document.getElementById("info").innerText = "";
+
+      try {
+        const res = await fetch("/api/fold?name=" + encodeURIComponent(name));
+        const data = await res.json();
+
+        if (data.error) {
+          document.getElementById("status").innerText = data.error;
+          return;
+        }
+
+        viewer.clear();
+        viewer.addModel(data.pdb, "pdb");
+        viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+        viewer.zoomTo();
+        viewer.render();
+        viewer.spin("y", 1);
+
+        document.getElementById("status").innerText = "";
+        const confPct = (data.confidence * 100).toFixed(1);
+        document.getElementById("info").innerText =
+          `${data.name}'s protein — ${data.sequence.length} residues — model confidence ${confPct}%`;
+      } catch (e) {
+        document.getElementById("status").innerText = "Something went wrong. Try again.";
+      }
+    }
+
+    document.getElementById("nameInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") foldName();
+    });
+  </script>
+</body>
+</html>
