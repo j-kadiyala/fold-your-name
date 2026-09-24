@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <title>Fold Your Name</title>
 <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   body { font-family: -apple-system, sans-serif; background: #0b0c10; color: #eee;
          text-align: center; margin: 0; padding: 40px 20px; }
@@ -18,6 +19,7 @@
             background: #14161c; position: relative; }
   #info { margin-top: 10px; font-size: 0.95em; color: #ccc; min-height: 1.5em; }
   #status { color: #888; margin-top: 20px; }
+  #downloadBtn { display: none; margin-top: 15px; }
 </style>
 </head>
 <body>
@@ -32,6 +34,7 @@
   <div id="status"></div>
   <div id="viewer"></div>
   <div id="info"></div>
+  <button id="downloadBtn" onclick="downloadCard()">Download my protein card</button>
 
   <script>
     let viewer = $3Dmol.createViewer("viewer", { backgroundColor: "0x14161c" });
@@ -42,6 +45,7 @@
 
       document.getElementById("status").innerText = "Folding...";
       document.getElementById("info").innerText = "";
+      document.getElementById("downloadBtn").style.display = "none";
 
       try {
         const res = await fetch("/api/fold?name=" + encodeURIComponent(name));
@@ -54,7 +58,13 @@
 
         viewer.clear();
         viewer.addModel(data.pdb, "pdb");
-        viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+        viewer.setStyle({}, { cartoon: { colorfunc: function(atom) {
+          const b = atom.b;
+          if (b > 0.9) return "#4f8cff";
+          if (b > 0.7) return "#7fd858";
+          if (b > 0.5) return "#f5c542";
+          return "#e05555";
+        }}});
         viewer.zoomTo();
         viewer.render();
         viewer.spin("y", 1);
@@ -63,9 +73,19 @@
         const confPct = (data.confidence * 100).toFixed(1);
         document.getElementById("info").innerText =
           `${data.name}'s protein — ${data.sequence.length} residues — model confidence ${confPct}%`;
+        document.getElementById("downloadBtn").style.display = "inline-block";
       } catch (e) {
         document.getElementById("status").innerText = "Something went wrong. Try again.";
       }
+    }
+
+    function downloadCard() {
+      html2canvas(document.getElementById("viewer")).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "my-protein.png";
+        link.href = canvas.toDataURL();
+        link.click();
+      });
     }
 
     document.getElementById("nameInput").addEventListener("keydown", e => {
