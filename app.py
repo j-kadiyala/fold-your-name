@@ -50,7 +50,13 @@ def api_latest():
 def home():
     return open("index.html").read()
 
+from fastapi.responses import FileResponse
+
+@app.get("/resume.pdf")
+def resume():
+    return FileResponse("resume.pdf", media_type="application/pdf")
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=port)``
